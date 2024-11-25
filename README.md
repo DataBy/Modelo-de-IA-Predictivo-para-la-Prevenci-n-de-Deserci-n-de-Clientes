@@ -1,7 +1,7 @@
 # 📊 Proyecto: Modelo IA para Predecir la Deserción de Clientes en una Entidad Bancaria
 
 ## 📌 Descripción General
-Este proyecto es el trabajo final de la especialidad de **Ciencia de Datos** de la **Universidad San Isidro del Labrador**, Costa Rica.  
+Este proyecto es el trabajo final de la especialidad de **Ciencia de Datos** de la **Universidad Internacional San Isidro del Labrador**, Costa Rica.  
 Su objetivo principal es desarrollar un modelo predictivo para anticipar la deserción de clientes en una institución bancaria, utilizando técnicas avanzadas de **Machine Learning**.  
 El modelo incluye:
 - **Análisis de datos**.
