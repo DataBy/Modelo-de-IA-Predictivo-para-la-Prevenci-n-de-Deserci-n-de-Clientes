@@ -1,0 +1,200 @@
+# Byron Bolaños
+# Posee un 87.77% de precisión
+
+# Montaje del drive
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Importamos el dataset procesado
+import pandas as pd
+ruta_archivo = 'tu_ruta_al_dataset'
+df = pd.read_csv(ruta_archivo)
+
+# Verificamos la carga de datos
+print("Dimensiones dataset:", df.shape)
+print("\nPrimeras 5 filas únicamente:")
+df.head()
+
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, roc_auc_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# División del dataset en características (X) y etiquetas (y)
+X = df.drop(columns=['Exited'])  # 'Exited' es la columna objetivo
+y = df['Exited']
+
+# División en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
+# --- Técnicas de aprendizaje no supervisado ---
+# Estandarización de los datos para PCA y K-Means
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_train)
+
+# PCA: Análisis de Componentes Principales
+pca = PCA(n_components=2, random_state=42)
+pca_components = pca.fit_transform(X_scaled)
+
+# Visualización de PCA
+plt.figure(figsize=(8, 6))
+plt.scatter(pca_components[:, 0], pca_components[:, 1], c=y_train, cmap='viridis', alpha=0.7)
+plt.colorbar(label='Etiqueta (Exited)')
+plt.title('PCA - Análisis de Componentes Principales')
+plt.xlabel('Componente Principal 1')
+plt.ylabel('Componente Principal 2')
+plt.show()
+
+# K-Means: Clustering
+kmeans = KMeans(n_clusters=3, random_state=42)
+clusters = kmeans.fit_predict(X_scaled)
+
+# Visualización de Clustering
+plt.figure(figsize=(8, 6))
+plt.scatter(pca_components[:, 0], pca_components[:, 1], c=clusters, cmap='tab10', alpha=0.7)
+plt.title('Clustering K-Means en Componentes PCA')
+plt.xlabel('Componente Principal 1')
+plt.ylabel('Componente Principal 2')
+plt.show()
+
+# --- Pipeline principal ---
+best_pipeline = make_pipeline(
+    StandardScaler(),
+    GradientBoostingClassifier(
+        random_state=42,
+        n_estimators=500,
+        learning_rate=0.01,
+        max_depth=5,
+        min_samples_split=10,
+        min_samples_leaf=1,
+        subsample=0.9,
+        max_features='sqrt'
+    )
+)
+
+#------------------------------------ MODELADO----------------------------------------------------
+
+# Entrenar el modelo utilizando el conjunto de entrenamiento
+# Se ajusta el modelo con los datos de entrenamiento (X_train y y_train).
+best_pipeline.fit(X_train, y_train)
+
+# Realizar predicciones sobre el conjunto de prueba
+# Utilizamos el modelo entrenado para predecir las etiquetas en el conjunto de prueba (X_test),
+# además calculamos las probabilidades para la clase positiva (Exited).
+y_pred = best_pipeline.predict(X_test)
+y_prob = best_pipeline.predict_proba(X_test)[:, 1]
+
+# Evaluar el rendimiento del modelo
+# Obtenemos la precisión en los datos de entrenamiento y prueba.
+# También calculamos la precisión promedio para tener una idea general de la capacidad del modelo.
+train_accuracy = best_pipeline.score(X_train, y_train)
+test_accuracy = best_pipeline.score(X_test, y_test)
+average_accuracy = (train_accuracy + test_accuracy) / 2
+
+# Mostrar las precisiones obtenidas en entrenamiento y prueba
+# Imprimimos la precisión obtenida en los conjuntos de entrenamiento y prueba, así como su promedio.
+print(f"Precisión en el conjunto de entrenamiento: {train_accuracy:.2%}")
+print(f"Precisión en el conjunto de prueba: {test_accuracy:.2%}")
+print(f"Precisión promedio: {average_accuracy:.2%}")
+
+# Generar y mostrar el reporte de clasificación
+# El reporte de clasificación incluye métricas clave como la precisión, recall y F1-score
+# para cada clase (Exited y No Exited), lo que permite evaluar el desempeño del modelo en detalle.
+print("\nReporte de clasificación:")
+print(classification_report(y_test, y_pred))
+
+# Generar la matriz de confusión
+# La matriz de confusión nos ayuda a entender los aciertos y errores del modelo, mostrando
+# la cantidad de verdaderos positivos, falsos positivos, verdaderos negativos y falsos negativos.
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("\nMatriz de confusión:")
+print(conf_matrix)
+
+# Visualización gráfica de la matriz de confusión
+# Mostramos la matriz de confusión utilizando un mapa de calor para visualizar mejor las distribuciones
+# y la relación entre las predicciones y los valores reales.
+plt.figure(figsize=(6, 5))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=["No Exited", "Exited"], yticklabels=["No Exited", "Exited"])
+plt.title("Matriz de Confusión")
+plt.xlabel("Predicción")
+plt.ylabel("Realidad")
+plt.show()
+
+# Generar y visualizar la curva ROC
+# La curva ROC y el área bajo la curva (AUC) nos permiten evaluar el desempeño del modelo
+# al comparar las tasas de verdaderos positivos y falsos positivos a diferentes umbrales de clasificación.
+fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+roc_auc = roc_auc_score(y_test, y_prob)
+
+plt.figure(figsize=(6, 5))
+plt.plot(fpr, tpr, color='blue', label=f'AUC = {roc_auc:.2f}')
+plt.plot([0, 1], [0, 1], color='gray', linestyle='--')
+plt.title('Curva ROC')
+plt.xlabel('Tasa de Falsos Positivos')
+plt.ylabel('Tasa de Verdaderos Positivos')
+plt.legend(loc="lower right")
+plt.show()
+
+# Evaluar la importancia de las características
+# Evaluamos la importancia de cada característica utilizando el modelo Gradient Boosting,
+# lo que nos permite identificar qué variables tienen mayor peso en la predicción de la deserción.
+importances = best_pipeline.named_steps['gradientboostingclassifier'].feature_importances_
+indices = np.argsort(importances)[::-1]
+
+# Visualizar gráficamente la importancia de las características
+# Mostramos las características más importantes para el modelo en una gráfica de barras,
+# lo que facilita la interpretación de cuáles variables influyen más en la predicción.
+plt.figure(figsize=(10, 6))
+sns.barplot(y=np.array(X.columns)[indices], x=importances[indices], palette="viridis")
+plt.title('Importancia de las Características')
+plt.xlabel('Importancia')
+plt.ylabel('Características')
+plt.show()
+
+# Visualización de la distribución de las etiquetas
+# Mostramos cómo están distribuidas las etiquetas (Exited) en el conjunto de datos,
+# lo que nos puede dar una idea de si el modelo tiene un sesgo hacia una de las clases.
+plt.figure(figsize=(8, 5))
+sns.countplot(x=y, palette="viridis")
+plt.title('Distribución de las Etiquetas')
+plt.xlabel('Exited')
+plt.ylabel('Cantidad de registros')
+plt.xticks([0, 1], ["NO Exited", "Exited"])
+plt.show()
+
+# EXPORTAR EL MODELO
+import joblib
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.pipeline import make_pipeline
+
+# Crear el pipeline con escalador y modelo
+# En este paso, creamos un pipeline que incluye tanto el escalado de las características como
+# el modelo de Gradient Boosting para asegurar que el modelo sea reproducible y fácil de aplicar a nuevos datos.
+scaler = StandardScaler()
+model = GradientBoostingClassifier(random_state=42)
+
+pipeline = make_pipeline(scaler, model)
+
+# Ajustar el pipeline con el conjunto de entrenamiento
+# Ajustamos el modelo dentro del pipeline usando los datos de entrenamiento, para prepararlo
+# para ser evaluado o utilizado en futuras predicciones.
+pipeline.fit(X_train, y_train)
+
+# Guardar el pipeline (modelo y escalador) en un archivo para su uso posterior
+# Exportamos el pipeline completo, que incluye tanto el modelo entrenado como el escalador,
+# para poder cargarlo y usarlo en el futuro sin tener que volver a entrenarlo.
+joblib.dump(best_pipeline, 'tu_ruta_de_exportacion')
+
+# Confirmación de la exportación exitosa del modelo
+# Imprimimos un mensaje de confirmación para asegurar que el modelo ha sido exportado correctamente.
+print("----------------------------------")
+print("\nModelo exportado correctamente")
+
