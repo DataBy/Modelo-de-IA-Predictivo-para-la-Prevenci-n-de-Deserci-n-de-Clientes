@@ -1,0 +1,111 @@
+# Byron Bolaños
+# Este código está diseñado para correr en Google Colab, vas a necesitar instalar lo siguiente dentro de Colab:
+# pip install streamlit
+# !pip install pyngrok
+
+# Luego puedes hacer uso del código:
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+
+# Verificar si el archivo del modelo existe
+modelo_path = 'tu_ruta_al_modelo_en_el_drive'
+
+if os.path.exists(modelo_path):
+    print("El modelo se encuentra en la ruta especificada.")
+else:
+    print("No se encontró el modelo en la ruta especificada.")
+
+code = """
+import streamlit as st
+import pandas as pd
+import joblib
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+# Cargar el pipeline completo
+pipeline = joblib.load('/content/drive/MyDrive/Data_Science/Project2/pipeline_completo.pkl')
+
+# Título centrado utilizando HTML
+st.markdown('<h1 style="text-align: center; color: #4CAF50;"> Predicción De Deserción De Clientes En Un Banco De Costa Rica 🏦🏦 </h1>', unsafe_allow_html=True)
+
+# Subtítulo
+st.subheader("¿Quieres predecir si un cliente desertará de los servicios ofrecidos?")
+st.subheader("Introduce los datos correspondientes: ")
+
+# Ingreso de datos con instrucciones detalladas
+
+# Mostrar opciones de geografía
+geography = st.selectbox("Selecciona la Geografía:", options=["Francia", "España", "Alemania"], index=0)
+
+# Mostrar opciones de género
+gender = st.selectbox("Selecciona el Género:", options=["Femenino", "Masculino"], index=0)
+
+# Ingreso de datos numéricos
+credit_score = st.number_input("Puntaje Crediticio (Credit Score)", min_value=300, max_value=850, value=619)
+age = st.number_input("Edad (Age)", min_value=18, max_value=100, value=42)
+tenure = st.number_input("Tiempo de fidelidad en años (Tenure)", min_value=0, max_value=10, value=2)
+balance = st.number_input("Saldo de Cuenta (Balance)", min_value=-500000.0, max_value=1000000.0, value=0.0)
+num_of_products = st.number_input("Número de productos", min_value=1, max_value=5, value=1)
+has_cr_card = st.radio("¿Tiene tarjeta de crédito?", options=[1, 0], index=1)
+is_active_member = st.radio("¿Es miembro activo?", options=[1, 0], index=1)
+estimated_salary = st.number_input("Salario estimado", min_value=0.0, max_value=250000.0, value=101348.88)
+
+# Crear DataFrame con los datos del formulario
+input_data = pd.DataFrame({
+    'CreditScore': [credit_score],
+    'Geography': [geography],
+    'Gender': [gender],
+    'Age': [age],
+    'Tenure': [tenure],
+    'Balance': [balance],
+    'NumOfProducts': [num_of_products],
+    'HasCrCard': [has_cr_card],
+    'IsActiveMember': [is_active_member],
+    'EstimatedSalary': [estimated_salary]
+})
+
+# Ajustar el preprocesador de acuerdo a los datos
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), ['CreditScore', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 'EstimatedSalary']),
+        ('cat', OneHotEncoder(categories=[['Francia', 'España', 'Alemania'], ['Femenino', 'Masculino']]), ['Geography', 'Gender'])
+    ])
+
+# Ajustar y transformar los datos
+input_data_transformed = preprocessor.fit_transform(input_data)
+
+# Ahora pasamos estos datos transformados al modelo
+if st.button("Procesar Predicción"):
+    prediccion = pipeline.predict(input_data_transformed)
+    probabilidad = pipeline.predict_proba(input_data_transformed)[:, 1]
+
+    # Mostrar los resultados
+    if prediccion[0] == 1:
+        st.write("El cliente **dejará la empresa** (Exited: 1).")
+    else:
+        st.write("El cliente **no dejará la empresa** (Exited: 0).")
+
+    st.write(f"Probabilidad de que el cliente deje la empresa: {probabilidad[0]:.2f}")
+
+
+
+"""
+with open("app.py", "w") as f:
+    f.write(code)
+
+
+# Finalmente necesitas utilizar esto para poder correrlo:
+from pyngrok import ngrok
+
+# Configura tu authtoken
+ngrok.set_auth_token("tu_token")
+public_url = ngrok.connect(8501)
+print('Streamlit app is live at:', public_url)
+
+# Finalmente, corre la app:
+!streamlit run app.py &
+
